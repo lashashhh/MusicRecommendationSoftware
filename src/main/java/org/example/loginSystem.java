@@ -8,6 +8,14 @@ import java.sql.ResultSet;
 
 public class loginSystem {
     private final Connection testConnection;
+    private static int currentUserId;
+
+    public static void setCurrentUserId(int id){
+        currentUserId = id;
+    }
+    public static int getCurrentUserId(){
+        return currentUserId;
+    }
 
     public loginSystem(){
         this.testConnection = null;
@@ -110,16 +118,31 @@ public class loginSystem {
     }
     
     public boolean tryLogin(String username, String password) throws Exception {
-        try (Connection conn = getConnection()){
-            var stmt = conn.prepareStatement("SELECT password_hash FROM users WHERE username = ?");
+/*        try (Connection conn = getConnection()){
+            var stmt = conn.prepareStatement("SELECT id, password_hash FROM users WHERE username = ?");
             stmt.setString(1, username);
             var rs = stmt.executeQuery();
-
             if (!rs.next()) return false;
             String storedHash = rs.getString("password_hash");
             return BCrypt.checkpw(password, storedHash);
-        }
+
+        }*/
+            try (Connection conn = getConnection()) {
+                var stmt = conn.prepareStatement("SELECT id, password_hash FROM users WHERE username = ?");
+                stmt.setString(1, username);
+                var rs = stmt.executeQuery();
+                if (!rs.next()) return false;
+
+                String storedHash = rs.getString("password_hash");
+                boolean ok = BCrypt.checkpw(password, storedHash);
+                if (ok) {
+                    int uid = rs.getInt("id");
+                    loginSystem.setCurrentUserId(uid);
+                }
+                return ok;
+            }
     }
+
 
     public boolean trySignup(String username, String password) throws Exception{
         try (Connection conn = getConnection()) {
