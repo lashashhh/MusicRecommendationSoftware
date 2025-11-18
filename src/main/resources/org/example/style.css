@@ -99,3 +99,22 @@
     -fx-padding-bottom: 15;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 10, 0.3, 0, 3);
 }
+
+.scroll-pane .scroll-bar{
+    -fx-opacity: 0;
+    -fx-padding: 0;
+    -fx-background-insets: 0;
+    -fx-background-color: transparent;
+}
+
+.scroll-pane. scroll-bar:vertical{
+    -fx-pref-width: 0;
+}
+
+.scroll-pane. scroll-bar:horizontal{
+    -fx-pref-width: 0;
+}
+
+.scroll-pane, .scroll-pane > .viewport{
+    -fx-background-color: transparent;
+}
