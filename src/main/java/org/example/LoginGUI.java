@@ -29,7 +29,7 @@ public class LoginGUI extends Application{
         root.setSpacing(15);
         root.getStyleClass().add("root");
 
-        Label title = new Label("Welcome to Music Recommender \uD83C\uDFB6"); //notes emoji
+        Label title = new Label("Welcome to Music Recommender \uD83C\uDFB6");
         title.getStyleClass().add("title-label");
 
         DropShadow glow = new DropShadow();
@@ -71,8 +71,10 @@ public class LoginGUI extends Application{
 
         Button loginButton = new Button("Sign In");
         loginButton.getStyleClass().add("button-primary");
+        loginButton.setDefaultButton(true);
         Button signupButton = new Button("Sign Up");
         signupButton.getStyleClass().add("button-secondary");
+
 
         grid.add(userLabel, 0, 0);
         grid.add(usernameField, 1, 0);
@@ -100,7 +102,6 @@ public class LoginGUI extends Application{
                 loginSystem system = new loginSystem();
                 boolean success = system.tryLogin(username, password);
                 if (success) {
-                 //   showAlert(Alert.AlertType.INFORMATION, "Login successful!");
                     new HomeScreen(username).start(primaryStage);
                 } else {
                     showAlert(Alert.AlertType.ERROR, "Invalid credentials.");
@@ -110,6 +111,7 @@ public class LoginGUI extends Application{
                 ex.printStackTrace();
             }
         });
+        passwordField.setOnAction(e -> loginButton.fire());
         signupButton.setOnAction(e -> {
             String username = usernameField.getText().trim();
             String password = passwordField.getText().trim();

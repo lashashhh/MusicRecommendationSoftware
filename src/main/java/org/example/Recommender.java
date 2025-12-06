@@ -41,12 +41,6 @@ public class Recommender {
 
         double maxLogPlaycount = computeMaxLogPlaycount(conn);
 
-        Map<String, Integer> df = new HashMap<>();
-        try (Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(
-                     "SELECT tag_name, COUNT(DISTINCT song_id) df FROM tags GROUP BY tag_name")) {
-            while (rs.next()) df.put(rs.getString(1).toLowerCase(), rs.getInt(2));
-        }
 
        //+1 per like, -2 per exclusion
         Map<String, Double> user = new HashMap<>();
@@ -91,7 +85,29 @@ public class Recommender {
             }
         }
 
-        if (user.isEmpty()) return topFromSongsByPlaycount(conn, limit); // edge case
+        if (user.isEmpty()) return topFromSongsByPlaycount(conn, limit);
+
+        Map<String, Integer> df = new HashMap<>();
+        Set<String> userTags = user.keySet();
+        if (!userTags.isEmpty()) {
+            String placeholders = userTags.stream()
+                    .map(t -> "?")
+                    .collect(Collectors.joining(","));
+            String dfSql = "SELECT tag_name, COUNT(DISTINCT song_id) df " +
+                    "FROM tags WHERE tag_name IN (" + placeholders + ") GROUP BY tag_name";
+
+            try (PreparedStatement ps = conn.prepareStatement(dfSql)) {
+                int idx = 1;
+                for (String tag : userTags) {
+                    ps.setString(idx++, tag);
+                }
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        df.put(rs.getString("tag_name").toLowerCase(), rs.getInt("df"));
+                    }
+                }
+            }
+        }
 
         Map<String, Double> userTfidf = new HashMap<>();
         for (var e : user.entrySet()) {
@@ -106,8 +122,8 @@ public class Recommender {
         double userNorm = Math.sqrt(userTfidf.values().stream().mapToDouble(x -> x * x).sum());
         if (userNorm == 0) userNorm = 1;
 
-        var userTags = userTfidf.keySet().stream().limit(100).toList();
-        String placeholders = userTags.stream().map(t -> "?").collect(Collectors.joining(","));
+        var topTags = userTfidf.keySet().stream().limit(100).toList();
+        String placeholders = topTags.stream().map(t -> "?").collect(Collectors.joining(","));
         String sql =
                 "SELECT s.id, s.track_name, s.artist_name, s.playcount, " +
                         "       GROUP_CONCAT(DISTINCT t.tag_name) AS tags " +
@@ -117,12 +133,12 @@ public class Recommender {
                         "AND s.id NOT IN (SELECT song_id FROM user_exclusions WHERE user_id = ?) " +
                         "GROUP BY s.id, s.track_name, s.artist_name, s.playcount";
 
-        if (userTags.isEmpty()) return topFromSongsByPlaycount(conn, limit);
+        if (topTags.isEmpty()) return topFromSongsByPlaycount(conn, limit);
 
         List<Rec> out = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             int i = 1;
-            for (String tag : userTags)ps.setString(i++, tag);
+            for (String tag : topTags) ps.setString(i++, tag);
             ps.setInt(i++, userId);
             ps.setInt(i, userId);
 
@@ -152,9 +168,11 @@ public class Recommender {
                         pop = raw / maxLogPlaycount;
                     }
 
-                    double fresh = fetchFreshness(conn, id);
-
-                    double alpha = 0.75, beta = 0.18, gamma = 0.00; // gamma set to 0.00 because I don't need freshness right now, will have to parametrize later idk
+                    double alpha = 0.75, beta = 0.18, gamma = 0.00; // gamma set to 0.00 because I don't need freshness right now since I dont have real users or duration to test it with
+                    double fresh = 0.0;
+                    if (gamma != 0.0) {
+                        fresh = fetchFreshness(conn, id);
+                    }
                     double score = alpha * cos + beta * pop + gamma * fresh;
 
                     out.add(new Rec(id, track, artist, score, tagCsv, plays));

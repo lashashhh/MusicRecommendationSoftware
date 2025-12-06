@@ -118,15 +118,6 @@ public class loginSystem {
     }
     
     public boolean tryLogin(String username, String password) throws Exception {
-/*        try (Connection conn = getConnection()){
-            var stmt = conn.prepareStatement("SELECT id, password_hash FROM users WHERE username = ?");
-            stmt.setString(1, username);
-            var rs = stmt.executeQuery();
-            if (!rs.next()) return false;
-            String storedHash = rs.getString("password_hash");
-            return BCrypt.checkpw(password, storedHash);
-
-        }*/
             try (Connection conn = getConnection()) {
                 var stmt = conn.prepareStatement("SELECT id, password_hash FROM users WHERE username = ?");
                 stmt.setString(1, username);
@@ -142,7 +133,6 @@ public class loginSystem {
                 return ok;
             }
     }
-
 
     public boolean trySignup(String username, String password) throws Exception{
         try (Connection conn = getConnection()) {
